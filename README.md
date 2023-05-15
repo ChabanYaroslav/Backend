@@ -1,5 +1,6 @@
 # Backend
 TODOs:
+
 		Yaroslav 
 		- records of permitted license plates (db related)
 		- log capturing (db related)
