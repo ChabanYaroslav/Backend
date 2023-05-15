@@ -1,6 +1,7 @@
 # Backend
 Backend for Embedded System
-TODOs:  
+TODOs:
+
 		- records of permitted license plates (db related)
 		- log capturing (db related)
 		- command and control for RPI (MQTT)
