@@ -1,0 +1,37 @@
+There is script of sql, to show:
+1. which tables in db are included
+2. structure of tables
+3. which columns and rows each table has
+
+----------SQL-Script----------------------------
+create table license_plates(
+	license_plate VARCHAR ( 20 ) PRIMARY KEY,
+	expiry_date DATE
+);
+
+create table images(
+	id INT GENERATED ALWAYS AS IDENTITY,
+	image_data BYTEA NOT NULL,
+	file_extension VARCHAR (70) NOT null,
+	PRIMARY KEY(id)
+);
+
+create table logs(
+	time_stemp TIMESTAMP not null,
+	action VARCHAR (60),
+	description  VARCHAR (60),
+	image_id INT,
+	CONSTRAINT fk_image_id
+      FOREIGN KEY(image_id)
+	  REFERENCES images(id)
+);
+
+insert into license_plates(license_plate, expiry_date)
+values
+	('W24681R', '2024-06-06'),
+	('KU791XR', '2025-06-06'),
+	('BL192CY', '2022-12-01')
+
+insert into logs(time_stemp, action, description, image_id)
+values
+	('2023-05-16 08:33:00', 'gate open', 'came delivery', null)
