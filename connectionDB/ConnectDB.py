@@ -1,5 +1,7 @@
 import psycopg2
 
+
+# mqtt.eclipseprojects.io
 class ConnectDB:
     """create connection with DB"""
     conn = None
@@ -29,13 +31,15 @@ class ConnectDB:
             print("Connection is successful")
         except:
             print("Connection is failed")
-        finally:
-            return self.conn
+        #finally:
+            #return self.conn
 
     def close(self):
         """close a connection with DB"""
         try:
             self.conn.close()
+            if self.cur is not None:
+                self.cur.close()
             print("Connection is closed")
         except:
             print("Closing is failed")
@@ -43,4 +47,13 @@ class ConnectDB:
     def get_cursor(self):
         """get cursor to execute sql-query
          for example: cursor.execute("select * from table_name")"""
-        return self.conn.cursor()
+        if self.conn is None:
+            return None
+        else:
+            return self.conn.cursor()
+
+    def commit(self):
+        self.conn.commit()
+
+    def rollback(self):
+        self.conn.rollback()
