@@ -19,6 +19,6 @@ with open(path_image, 'rb') as image_file:
 message = m.json_message(1001, encoded_image)
 print(message)
 while True:
-    client.publish("Test", message) # Topic calls Test
+    client.publish("SPS_2023", message) # Topic calls Test
     print("Topic Test was published: ", message)
-    time.sleep(15)
+    time.sleep(3)

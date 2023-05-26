@@ -1,6 +1,8 @@
 import datetime
 import connectionDB.API_DB as db
 
+print(datetime.datetime.today())
+
 db.connect()
 
 result = db.get_license("W24681R")
