@@ -1,6 +1,6 @@
-""" API to communication with DBs """
+""" API to communicate with DB """
 from datetime import datetime
-import connectionDB.DB as DB
+import DB as DB
 
 
 def connect():
@@ -24,6 +24,10 @@ def record_license(license_plate: str, expiry_date: str):
     DB.record_license(license_plate, expiry_date)
 
 
+def get_all_licenses():
+    return DB.get_all_licenses()
+
+
 def get_log(time_stamp: datetime, by: str):
     """get log by: year-month-day or year-month-day-hour and if by is None get all logs
 
@@ -34,7 +38,11 @@ def get_log(time_stamp: datetime, by: str):
     return DB.get_log(time_stamp, by)
 
 
-def record_log(time_stamp: datetime, action: str, description: str, time_stamp_of_image: datetime = None):
+def get_all_logs():
+    return DB.get_all_logs()
+
+
+def record_log(time_stamp: datetime, action: str, description: str = "", time_stamp_of_image: datetime = None):
     """record log
     image_id can be None"""
     DB.record_log(time_stamp, action, description, time_stamp_of_image)
@@ -49,9 +57,14 @@ def get_image(id: datetime):
     return DB.get_image(id)
 
 
+def get_all_images():
+    return DB.get_all_images()
+
+
 def save_image(time_stamp: datetime, image):
     """save image in DB"""
     DB.save_image(time_stamp, image)
+
 
 def record_log_with_image(time_stamp: datetime, action: str, description: str, image):
     DB.save_image(time_stamp, image)

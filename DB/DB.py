@@ -1,10 +1,7 @@
-"""this module provide:
- 1. records/gets license
- 2. records/gets log
- 3. records/gets photo"""
+"""this module provides communication with db"""
 
 from datetime import datetime
-from connectionDB.ConnectDB import ConnectDB
+from DB.ConnectDB import ConnectDB
 
 # DB
 conn = ConnectDB()
@@ -54,6 +51,11 @@ def record_license(license: str, expiry_date: str):
 
     return __insert_data(name_of_table, column, values)
 
+def get_all_licenses():
+    name_of_table = licenses_table
+    column = '*'
+    return __get_data(column, name_of_table)
+
 
 def get_log(time_stamp: datetime, by: str):
     """get log by: year-month-day or year-month-day-hour and if by is None get all logs
@@ -88,6 +90,11 @@ def get_log(time_stamp: datetime, by: str):
 
     return __get_data(column, name_of_table, where_condition)
 
+def get_all_logs():
+    name_of_table = logs_table
+    column = '*'
+    return __get_data(column, name_of_table)
+
 
 def record_log(time_stamp: datetime, action: str, description: str, time_stamp_of_image: datetime = None):
     column = "time_stemp, action, description, image_id"
@@ -104,12 +111,18 @@ def get_image(id: datetime):
     name_of_table = images_table
     where_condition = "id = \'" + id + "\'"
     data = __get_data(column, name_of_table, where_condition)
-    if data is not None:
-        data = data[0]
+    #if data is not None:
+    #    data = data[0]
         # Write the binary data to a file
-        with open('image_{}.jpg'.format(id), 'wb') as f:
-            f.write(data)
+        #with open('image_{}.jpg'.format(id), 'wb') as f:
+            #f.write(data)
     return data
+
+def get_all_images():
+    name_of_table = images_table
+    column = '*'
+    return __get_data(column, name_of_table)
+
 
 
 def save_image(time_stamp: datetime, image):
@@ -117,6 +130,7 @@ def save_image(time_stamp: datetime, image):
     column = 'id, image_data'
     value = [str(time_stamp), image]
     return __insert_data(name_of_table, column, value)
+
 
 
 # private function

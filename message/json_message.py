@@ -46,3 +46,12 @@ def json_message(action: str, body: str = ''):
 def loads(json_message):
     """decode json object"""
     return json.loads(json_message)
+
+
+def save_to_file(json_message: json, path_of_file: str):
+    try:
+        file = open(path_of_file, "w")
+        json.dump(json_message, file, indent=4)
+        file.close()
+    except Exception as e:
+        print("Error by json saving:", e)

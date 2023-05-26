@@ -1,5 +1,5 @@
 import datetime
-import connectionDB.API_DB as db
+import DB.API_DB as db
 
 print(datetime.datetime.today())
 

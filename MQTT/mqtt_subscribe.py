@@ -2,10 +2,9 @@ import base64
 import datetime
 import time
 
-import paho.mqtt.client as mqtt
-import MQTT.json_message as json_m
+import message.json_message as json_m
 import MQTT.mqtt_connection as connection
-import connectionDB.API_DB as db
+import DB.API_DB as DB
 
 path_of_image = "../received/image/image.jpg"
 path_of_json_log = "../received/states_of_rpi/states.json"
@@ -26,7 +25,7 @@ def on_message(client, userdata, messager):
             # decode body in image date
             image_data = base64.b64decode(body)
             # save in DB
-            db.save_image(timestamp, image_data)
+            DB.save_image(timestamp, image_data)
             # save as jpg in folder
             with open(path_of_image, 'wb') as image_file:
                 image_file.write(image_data)
@@ -51,11 +50,11 @@ def on_message(client, userdata, messager):
 
             ac = a + l
             des = ls1 + ls2
-            db.record_log(timestamp, ac, des)
+            # save in DB
+            DB.record_log(timestamp, ac, des)
 
-            # save in folder
-            with open(path_of_json_log, "w") as outfile:
-                outfile.write(messager)
+            # save json in folder
+            json_m.save_to_file(m, path_of_json_log)
 
 
 # start subscribe
