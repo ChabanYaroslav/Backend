@@ -95,7 +95,7 @@ class IDatabase:
     @abstractmethod
     def updatePlate(self, plate_id: string, plate: Plate) -> bool:
         pass
-
+    # getImage gets an image from the database and returns an ImageEntity.
     @abstractmethod
     def getImage(self, image_id: datetime) -> None | ImageEntity:
         pass
@@ -144,7 +144,7 @@ class MemoryDevice(IDevice):
 
 
 class MemoryDatabase(IDatabase):
-    now : datetime = None
+    now: datetime = None
     logs = []
     plates = []
     images = []
@@ -156,10 +156,11 @@ class MemoryDatabase(IDatabase):
         MemoryDatabase.plates = [Plate("L2776XY", MemoryDatabase.now + datetime.timedelta(hours=10)),
                                  Plate("A2122UH", MemoryDatabase.now + datetime.timedelta(days=10)),
                                  Plate("H7742L", MemoryDatabase.now + datetime.timedelta(days=100))]
-        MemoryDatabase.logs = [Log(MemoryDatabase.now - datetime.timedelta(hours=1), "Open Bar", "The Bar opened.", None),
-                               Log(MemoryDatabase.now - datetime.timedelta(minutes=30), "Close Bar", "The Bar was closed",
-                                   MemoryDatabase.now - datetime.timedelta(minutes=30))]
-        self.getImageBase64("../files/testimage.jpeg")
+        MemoryDatabase.logs = [
+            Log(MemoryDatabase.now - datetime.timedelta(hours=1), "Open Bar", "The Bar opened.", None),
+            Log(MemoryDatabase.now - datetime.timedelta(minutes=30), "Close Bar", "The Bar was closed",
+                MemoryDatabase.now - datetime.timedelta(minutes=30))]
+        self.getImageBase64("./files/testimage.jpeg")
 
     def getAllLogs(self) -> list[Log]:
         return MemoryDatabase.logs
@@ -212,19 +213,10 @@ class Container(containers.DeclarativeContainer):
         MemoryDevice
     )
 
+
 class PlatesResolver(Resource):
 
     # Returns all plates in the database
-    @inject
-    def get(self, database: IDatabase = Provide[Container.database]):
-        try:
-            plates = database.getAllPlates()
-            return jsonify([p.to_json() for p in plates])
-        except Exception as ex:
-            logging.error(ex)
-            abort(500)
-
-    # Gets multiple plates in the body of the request and adds it to the database.
     @inject
     def post(self, database: IDatabase = Provide[Container.database]):
         plates = []
@@ -240,6 +232,18 @@ class PlatesResolver(Resource):
             return Response(json.dumps([p.to_json() for p in plates]), status=400, mimetype='application/json')
         else:
             return "OK"
+
+    # Gets multiple plates in the body of the request and adds it to the database.
+    @inject
+
+
+    def get(self, database: IDatabase = Provide[Container.database]):
+        try:
+            plates = database.getAllPlates()
+            return jsonify([p.to_json() for p in plates])
+        except Exception as ex:
+            logging.error(ex)
+            abort(500)
 
 
 class PlateResolver(Resource):
@@ -344,7 +348,6 @@ class ActorsResolver(Resource):
 
 
 def run(port: int = 5000, debug: bool = False):
-
     app = Flask(__name__)
     api = Api(app)
 
@@ -362,5 +365,3 @@ def run(port: int = 5000, debug: bool = False):
     container.init_resources()
     container.wire(modules=[__name__])
     app.run(debug=debug, port=port)  # run our Flask app
-
-
