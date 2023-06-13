@@ -4,8 +4,8 @@
     N | action |       body           | meaning
     -----------------------------------------------------
     1 | 1000   |    photo data        | sends photo to BE
-    2 | 1001   |                      | sends state "gate open" to BE
-    3 | 1002   |                      | sends state "gate close" to BE
+    2 | 1001   |                      | sends answers "ok" to the request "set states" to BE
+      | 1002   |                      |
     3 | 1111   | "gate,light,LS1,LS2" | sends all states to BE
         example for 3: { action: 1111, body: "1111" }
         where in body "1" means: gate is open, light is on; LS1 and LS2 we have something in front of the sensor
@@ -14,10 +14,10 @@
     Backend -> RPI
      N | action |       body           | meaning
     -----------------------------------------------------
-     1 | 0001  |                       | sends command to light on
-     2 | 0010  |                       | sends command to light off
-     3 | 0100  |                       | sends command to open gate
-     4 | 0101  |                       | sends command to close gate
+     1 | 0001  |                       |
+     2 | 0010  |                       |
+     3 | 0100  |                       |
+     4 | 0101  |                       |
      5 | 0111  |                       | requests photo
     6a | 0000  |                       | requests all states
     6b | 0000  | "gate,light"          | sets state of RMI as long as it is not reset; 2 means don't care, 1 or 0 set states of RPI

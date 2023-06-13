@@ -12,7 +12,7 @@ import datetime
 from dateutil import parser
 
 from DataBase import API_DB as api_db
-from MQTT import API_Publish as api_publish
+from MQTT import API_MQTT as api_mqtt
 
 
 class Plate:
@@ -139,24 +139,26 @@ class IDatabase:
         if image is None or len(image) == 0:
             return None
         else:
-            return ImageEntity(image_id, image)
+            return ImageEntity(image_id, str(image))
 
 class IDevice:
     # getImage requests an Image from a device and returns an Image Entity with the timestamp and the base64 string.
     @abstractmethod
     def getImage(self) -> ImageEntity:
-        api_publish.require_photo()
-        pass
+        time, image_data = api_mqtt.get_photo_from_rbi("./files/testimage.jpeg") # where should photo be saved????
+        return ImageEntity(time, str(image_data))
 
     # getSystemState request the current state from a device and returns an Actor object.
     @abstractmethod
     def getSystemState(self) -> Actor:
-        pass
+        light, bar = api_mqtt.get_system_state_from_rbi()
+        return Actor(light, bar)
 
     # setStates allows to set the states on the device. Returns true when operation was successful, false otherwise.
     @abstractmethod
     def setStates(self, states: Actor) -> bool:
-        pass
+        is_set = api_mqtt.set_system_state(states.light, states.bar)
+        return is_set
 
 
 class MemoryDevice(IDevice):

@@ -51,7 +51,8 @@ def record_log(time_stamp: datetime, action: str, description: str = "", time_st
 
 
 def get_image(id: datetime) -> base64:
-    """get image as base64 data """
+    """get image as base64 data
+    to decode: base64.b64decode(data) or data.decode('utf-8')"""
     return db.get_image(id)
 
 
@@ -64,7 +65,7 @@ def save_image(time_stamp: datetime, image: base64)  -> []:
     return db.save_image(time_stamp, image)
 
 
-def record_log_with_image(time_stamp: datetime, action: str, description: str, image) -> []:
+def record_log_with_image(time_stamp: datetime, action: str, description: str, image: base64) -> []:
     db.save_image(time_stamp, image)
     db.record_log(time_stamp, action, description, time_stamp)
 
