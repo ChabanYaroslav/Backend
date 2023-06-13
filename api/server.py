@@ -31,7 +31,7 @@ class Plate:
 
 
 class ImageEntity:
-    def __init__(self, image_id: datetime.datetime, image):
+    def __init__(self, image_id: datetime.datetime, image: str):
         if isinstance(image_id, str):
             image_id = parser.parse(image_id)
         self.id = image_id
@@ -123,10 +123,11 @@ class IDatabase:
         else:
             return True
 
-
-    # updatePlate updates a plate in the database. If the process was successful, return true, otherwise return false.
+    # remPlate updates a plate in the database. If the process was successful, return true, otherwise return false.
     @abstractmethod
     def updatePlate(self, plate_id: string, plate: Plate) -> bool:
+        pass
+    # getImage gets an image from the database and returns an ImageEntity.
         result = api_db.change_license(plate.plate, plate.expireDate, plate_id)
         if result is None:
             return False
@@ -143,12 +144,13 @@ class IDatabase:
             return ImageEntity(image_id, image)
 
 class IDevice:
-    # getImage requests an Image from a device and returns an Image object with the image encoded as base64.
+    # getImage requests an Image from a device and returns an Image Entity with the timestamp and the base64 string.
     @abstractmethod
     def getImage(self):
         api_publish.require_photo()
         # TODO: how to get photo if it is not jet received
         # wait ?? image with datatime of request
+    def getImage(self) -> ImageEntity:
         pass
 
     # getSystemState request the current state from a device and returns an Actor object.
@@ -164,12 +166,14 @@ class IDevice:
 
 class MemoryDevice(IDevice):
     def __init__(self):
+        self.image64 = None
         self.light = 0
         self.bar = 0
-        self.getImageBase64("../files/testimage.jpeg")
+        self.getImageBase64("./files/testimage.jpeg")
 
-    def getImage(self):
-        return self.image64
+    def getImage(self) -> ImageEntity:
+        ent = ImageEntity(datetime.datetime.now(), self.image64)
+        return ent
 
     def getSystemState(self) -> Actor:
         a = Actor(self.light, self.bar)
@@ -188,7 +192,7 @@ class MemoryDevice(IDevice):
 
 
 class MemoryDatabase(IDatabase):
-    now : datetime = None
+    now: datetime = None
     logs = []
     plates = []
     images = []
@@ -200,10 +204,11 @@ class MemoryDatabase(IDatabase):
         MemoryDatabase.plates = [Plate("L2776XY", MemoryDatabase.now + datetime.timedelta(hours=10)),
                                  Plate("A2122UH", MemoryDatabase.now + datetime.timedelta(days=10)),
                                  Plate("H7742L", MemoryDatabase.now + datetime.timedelta(days=100))]
-        MemoryDatabase.logs = [Log(MemoryDatabase.now - datetime.timedelta(hours=1), "Open Bar", "The Bar opened.", None),
-                               Log(MemoryDatabase.now - datetime.timedelta(minutes=30), "Close Bar", "The Bar was closed",
-                                   MemoryDatabase.now - datetime.timedelta(minutes=30))]
-        self.getImageBase64("../files/testimage.jpeg")
+        MemoryDatabase.logs = [
+            Log(MemoryDatabase.now - datetime.timedelta(hours=1), "Open Bar", "The Bar opened.", None),
+            Log(MemoryDatabase.now - datetime.timedelta(minutes=30), "Close Bar", "The Bar was closed",
+                MemoryDatabase.now - datetime.timedelta(minutes=30))]
+        self.getImageBase64("./files/testimage.jpeg")
 
     def getAllLogs(self) -> list[Log]:
         return MemoryDatabase.logs
@@ -256,19 +261,10 @@ class Container(containers.DeclarativeContainer):
         MemoryDevice
     )
 
+
 class PlatesResolver(Resource):
 
     # Returns all plates in the database
-    @inject
-    def get(self, database: IDatabase = Provide[Container.database]):
-        try:
-            plates = database.getAllPlates()
-            return jsonify([p.to_json() for p in plates])
-        except Exception as ex:
-            logging.error(ex)
-            abort(500)
-
-    # Gets multiple plates in the body of the request and adds it to the database.
     @inject
     def post(self, database: IDatabase = Provide[Container.database]):
         plates = []
@@ -284,6 +280,18 @@ class PlatesResolver(Resource):
             return Response(json.dumps([p.to_json() for p in plates]), status=400, mimetype='application/json')
         else:
             return "OK"
+
+    # Gets multiple plates in the body of the request and adds it to the database.
+    @inject
+
+
+    def get(self, database: IDatabase = Provide[Container.database]):
+        try:
+            plates = database.getAllPlates()
+            return jsonify([p.to_json() for p in plates])
+        except Exception as ex:
+            logging.error(ex)
+            abort(500)
 
 
 class PlateResolver(Resource):
@@ -323,6 +331,7 @@ class CurrentImageResolver(Resource):
     def get(self, device: IDevice = Provide[Container.device]):
         try:
             i = device.getImage()
+            i = i.image
             base64string = 'data:image/jpeg;base64,' + str(i).split('\'')[1]
             return {
                 "imagedata": base64string
@@ -388,7 +397,6 @@ class ActorsResolver(Resource):
 
 
 def run(port: int = 5000, debug: bool = False):
-
     app = Flask(__name__)
     api = Api(app)
 
@@ -406,5 +414,3 @@ def run(port: int = 5000, debug: bool = False):
     container.init_resources()
     container.wire(modules=[__name__])
     app.run(debug=debug, port=port)  # run our Flask app
-
-

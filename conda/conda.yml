@@ -1,0 +1,34 @@
+name: SPS
+
+dependencies:
+  - python
+  - pip
+  - matplotlib
+  - opencv
+  - pip:
+      - opencv-python>=4.1.1.26
+      - lxml
+      - tqdm
+      - tensorflow>=2.3.0
+      - absl-py
+      - easydict
+      - pillow
+      - pytesseract
+      - Flask
+      - python-dateutil
+      - Pillow
+      - pip
+      - wheel
+      - Jinja2
+      - pytz
+      - MarkupSafe
+      - Werkzeug
+      - click
+      - blinker
+      - itsdangerous
+      - numpy
+      - setuptools
+      - pandas
+      - imageio
+      - six
+      - aniso8601
