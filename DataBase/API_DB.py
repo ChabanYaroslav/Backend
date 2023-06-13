@@ -51,11 +51,7 @@ def record_log(time_stamp: datetime, action: str, description: str = "", time_st
 
 
 def get_image(id: datetime) -> base64:
-    """get image as raw data
-    to save image as jpg you have to write:
-
-    with open('image.jpg', 'wb') as f:
-        f.write(data)"""
+    """get image as base64 data """
     return db.get_image(id)
 
 
