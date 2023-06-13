@@ -123,18 +123,16 @@ class IDatabase:
         else:
             return True
 
-    # remPlate updates a plate in the database. If the process was successful, return true, otherwise return false.
+    # updatePlate updates plate in the database, if it was successful returns true, else false
     @abstractmethod
     def updatePlate(self, plate_id: string, plate: Plate) -> bool:
-        pass
-    # getImage gets an image from the database and returns an ImageEntity.
         result = api_db.change_license(plate.plate, plate.expireDate, plate_id)
         if result is None:
             return False
         else:
             return True
 
-
+    # getImage gets an image from the database and returns an ImageEntity.
     @abstractmethod
     def getImage(self, image_id: datetime) -> None | ImageEntity:
         image = api_db.get_image(image_id)
@@ -146,11 +144,8 @@ class IDatabase:
 class IDevice:
     # getImage requests an Image from a device and returns an Image Entity with the timestamp and the base64 string.
     @abstractmethod
-    def getImage(self):
-        api_publish.require_photo()
-        # TODO: how to get photo if it is not jet received
-        # wait ?? image with datatime of request
     def getImage(self) -> ImageEntity:
+        api_publish.require_photo()
         pass
 
     # getSystemState request the current state from a device and returns an Actor object.
