@@ -9,7 +9,7 @@ import MQTT.mqtt_connection as connection
 topic = "SPS_2023"
 
 
-def get_photo_from_rbi(path_of_photo: str):
+def get_photo_from_rbi():
     photo = None
     timestamp = None
     run = True
@@ -32,7 +32,7 @@ def get_photo_from_rbi(path_of_photo: str):
             Thread(target=db.record_log_with_image,
                    args=[timestamp, "receive photo", "got photo from RBI", body]).start()
             # save image as jpg in folder
-            Thread(target=__save_image, args=[path_of_photo, body]).start()
+            #Thread(target=__save_image, args=[path_of_photo, body]).start()
 
             run = False  # stop while
     # end of on_message
@@ -126,12 +126,13 @@ def set_system_state(light: int, bar: int) -> bool:
         m = json_m.loads(messager.payload.decode("utf-8"))
         action = m["action"]
 
-        if action == "1001":
+        if action == "1002":
             is_set = True
             run = False
             Thread(target=db.record_log,
                    args=[timestamp, "receive answer",
                          "receive answer to request from RBI to set its states like: light: " + str(light) + "bar: " + str(bar)]).start()
+
     # end of on_message
 
     # 2 means that RBI can decide for itself what to do
