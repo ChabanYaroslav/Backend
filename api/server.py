@@ -28,7 +28,7 @@ class Plate:
 
 
 class ImageEntity:
-    def __init__(self, image_id: datetime.datetime, image):
+    def __init__(self, image_id: datetime.datetime, image: str):
         if isinstance(image_id, str):
             image_id = parser.parse(image_id)
         self.id = image_id
@@ -102,9 +102,9 @@ class IDatabase:
 
 
 class IDevice:
-    # getImage requests an Image from a device and returns an Image object with the image encoded as base64.
+    # getImage requests an Image from a device and returns an Image Entity with the timestamp and the base64 string.
     @abstractmethod
-    def getImage(self):
+    def getImage(self) -> ImageEntity:
         pass
 
     # getSystemState request the current state from a device and returns an Actor object.
@@ -120,12 +120,14 @@ class IDevice:
 
 class MemoryDevice(IDevice):
     def __init__(self):
+        self.image64 = None
         self.light = 0
         self.bar = 0
-        self.getImageBase64("../files/testimage.jpeg")
+        self.getImageBase64("./files/testimage.jpeg")
 
-    def getImage(self):
-        return self.image64
+    def getImage(self) -> ImageEntity:
+        ent = ImageEntity(datetime.datetime.now(), self.image64)
+        return ent
 
     def getSystemState(self) -> Actor:
         a = Actor(self.light, self.bar)
@@ -283,6 +285,7 @@ class CurrentImageResolver(Resource):
     def get(self, device: IDevice = Provide[Container.device]):
         try:
             i = device.getImage()
+            i = i.image
             base64string = 'data:image/jpeg;base64,' + str(i).split('\'')[1]
             return {
                 "imagedata": base64string
