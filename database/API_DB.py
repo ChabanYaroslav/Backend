@@ -1,22 +1,22 @@
-""" API to communicate with DataBase """
+""" API to communicate with database """
 import base64
 from datetime import datetime
-import DataBase.DB as db
+import database.DB as db
 
 
 def connect():
-    """create connection with DataBase"""
+    """create connection with database"""
     db.connect()
 
 
 def close_connection():
-    """close connection with DataBase"""
+    """close connection with database"""
     db.close_connection()
 
 
 def get_license(license_plate: str) -> []:
     """get license with its expiry_date, else given license
-        does not exist in DataBase return value is None"""
+        does not exist in database return value is None"""
     return db.get_license(license_plate)
 
 

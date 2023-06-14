@@ -2,16 +2,15 @@
 import base64
 from datetime import datetime
 
-import psycopg2
 
-from DataBase.ConnectDB import ConnectDB
+from database.ConnectDB import ConnectDB
 
-# DataBase
+# database
 conn = ConnectDB()
 conn.connect()
 cur = conn.get_cursor()
 
-# name of the tables in DataBase
+# name of the tables in database
 licenses_table = 'license_plates'
 images_table = 'images'
 logs_table = 'logs'
@@ -26,7 +25,7 @@ delete_query = "DELETE FROM {} WHERE {}"
 
 
 def connect():
-    """create connection with DataBase"""
+    """create connection with database"""
     global conn  # to change global variable
     conn = ConnectDB()
     conn.connect()
@@ -41,7 +40,7 @@ def close_connection():
 
 def get_license(license: str) -> (str, str):
     """get license with its expiry_date, else given license
-    does not exist in DataBase return value is (-1,-1)"""
+    does not exist in database return value is (-1,-1)"""
     column = "license_plate, expiry_date"
     name_of_table = licenses_table
     where_condition = "license_plate = \'" + license + "\'"

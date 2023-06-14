@@ -16,7 +16,7 @@ def connect_to_broker():
         client = mqtt.Client(name_of_client)
         client.connect(mqtt_broker)
         client.subscribe(topic)
-        print("MQTT-Subscribe is connected with broker. Subscribe topic is:", topic)
+        print("mqtt-Subscribe is connected with broker. Subscribe topic is:", topic)
     except Exception as e:
         print("Error by connection with broker: ", e)
         client = None

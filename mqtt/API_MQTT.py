@@ -1,18 +1,21 @@
 import base64
 import datetime
+import time
 from threading import Thread
 
-import DataBase.API_DB as db
+import cv2
+
+import database.API_DB as db
 from message import json_message as json_m
-import MQTT.mqtt_connection as connection
+import mqtt.mqtt_connection as connection
 
 topic = "SPS_2023"
-
+photo = None
+timestamp = None
 
 def get_photo_from_rbi():
-    photo = None
-    timestamp = None
-    run = True
+    global photo, timestamp
+
 
     def on_message(client, userdata, messager):
         global photo, timestamp, run
@@ -27,14 +30,14 @@ def get_photo_from_rbi():
                 run = False
                 return
 
-            photo = body
-            # save image in DataBase #db.save_image(timestamp, body)
+            photo = body  # base64 opencv frame
+            # save image in database #db.save_image(timestamp, body)
             Thread(target=db.record_log_with_image,
-                   args=[timestamp, "receive photo", "got photo from RBI", body]).start()
-            # save image as jpg in folder
-            #Thread(target=__save_image, args=[path_of_photo, body]).start()
+                   args=[timestamp, "receive photo", "got photo from RBI", photo]).start()
 
-            run = False  # stop while
+            # stop subscribe
+            client.disconnect()
+
     # end of on_message
 
     message = json_m.json_message("0111")  # request photo
@@ -45,19 +48,15 @@ def get_photo_from_rbi():
     client.publish(topic, message)  # send message to rbi
 
     # start subscribe
-    client.loop_start()
-    while run:  # if we get the photo run will be changed to False
-        client.on_message = on_message
-        datetime.time.sleep(0.1)
-    # stop subscribe
-    client.loop_stop()
-    client.disconnect()
+    client.on_message = on_message
+    client.loop_forever()
 
     return timestamp, photo
 
 
 def get_system_state_from_rbi():
-    light = -1, bar = -1
+    light = -1
+    bar = -1
     run = True
 
     def on_message(client, userdata, messager):
@@ -89,7 +88,7 @@ def get_system_state_from_rbi():
 
             ac = a + l
             des = ls1 + ls2
-            # save in DataBase # db.record_log(timestamp, ac, des)
+            # save in database # db.record_log(timestamp, ac, des)
             Thread(target=db.record_log,
                    args=[timestamp, "receive states", des]).start()
 
@@ -108,7 +107,7 @@ def get_system_state_from_rbi():
     client.loop_start()
     while run:  # if we get the photo run will be changed to False
         client.on_message = on_message
-        datetime.time.sleep(0.1)
+        time.sleep(0.1)
     # stop subscribe
     client.loop_stop()
     client.disconnect()
@@ -125,13 +124,24 @@ def set_system_state(light: int, bar: int) -> bool:
         timestamp = datetime.datetime.today()
         m = json_m.loads(messager.payload.decode("utf-8"))
         action = m["action"]
+        body = m["body"]
 
-        if action == "1002":
-            is_set = True
+        if action == "1111":  # 1111 with new states with body: gate,light
+            rec_bar = int(body[0])
+            rec_light = int(body[1])
+            if rec_bar == bar and rec_light == light:
+                is_set = True
+                Thread(target=db.record_log,
+                       args=[timestamp, "receive answer",
+                             "receive answer to request from RBI to set its states like: light: " + str(
+                                 light) + "bar: " + str(bar)]).start()
+            else:
+                is_set = False
+                Thread(target=db.record_log,
+                       args=[timestamp, "receive answer",
+                             "unsuccessful setting of states. Actual states are: light: " + str(
+                                 rec_light) + "bar: " + str(rec_bar)]).start()
             run = False
-            Thread(target=db.record_log,
-                   args=[timestamp, "receive answer",
-                         "receive answer to request from RBI to set its states like: light: " + str(light) + "bar: " + str(bar)]).start()
 
     # end of on_message
 
@@ -154,7 +164,7 @@ def set_system_state(light: int, bar: int) -> bool:
     client.loop_start()
     while run:  # if we get the photo run will be changed to False
         client.on_message = on_message
-        datetime.time.sleep(0.1)
+        time.sleep(0.1)
     # stop subscribe
     client.loop_stop()
     client.disconnect()

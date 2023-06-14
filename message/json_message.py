@@ -5,7 +5,7 @@
     -----------------------------------------------------
     1 | 1000   |    photo data        | sends photo to BE by request from BE
     2 | 1001   |    photo data        | sends photo to BE if car is in front of the gate
-      | 1002   |                      | sends answers "ok" to the request "set states" to BE
+      | 1002   |                      |
     3 | 1111   | "gate,light,LS1,LS2" | sends all states to BE
         example for 3: { action: 1111, body: "1111" }
         where in body "1" means: gate is open, light is on; LS1 and LS2 we have something in front of the sensor

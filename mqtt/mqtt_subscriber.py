@@ -1,11 +1,13 @@
 import base64
 import datetime
+import os
+import sys
 import time
 from threading import Thread
 
 import message.json_message as json_m
-import MQTT.mqtt_connection as connection
-import DataBase.API_DB as api_db
+import mqtt.mqtt_connection as connection
+import database.API_DB as api_db
 from api.server import ImageEntity
 from recognition.recogntion import Recognizer
 
@@ -16,12 +18,15 @@ def on_message(client, userdata, messager):
     action = m["action"]
     body = m["body"]  # this should be in base64
 
+    if action == "1000":
+        print("receive 1000")
+
     if action == "1001":  # receive photo if car is in front of the gate
         if len(body) <= 0:
             print("Error: body is empty by receiving of photo")
             return
 
-        # save image in DataBase #db.save_image(timestamp, body)
+        # save image in database #db.save_image(timestamp, body)
         t = Thread(target=api_db.record_log_with_image,
                args=[timestamp, "receive photo", "got photo of car from RBI", body])
         threads.append(t)
@@ -33,7 +38,6 @@ def on_message(client, userdata, messager):
 
 def publish_command(timestamp:datetime, image64: base64):
     number = None; expiry_date = None
-    detecter = Recognizer('./recognition/yolo_model/custom-416')
     image = ImageEntity(timestamp, image64)
     plate_number_d = detecter.detect(image) # get number of plate
 
@@ -68,22 +72,31 @@ def publish_command(timestamp:datetime, image64: base64):
         threads.append(t)
         t.start()
 
+
 topic = "SPS_2023"
 threads = []
-# start subscribe
-client = connection.connect_to_broker()
-client.loop_start()
+detecter = None
+client = None
+def run():
+    print("Subscriber runs")
+    global  detecter, client
 
-while True:
-    client.on_message = on_message
-    time.sleep(0.5)
+    detecter = Recognizer(os.path.join('.', 'recognition', 'yolo_model'))
+
+    # start subscribe
+    client = connection.connect_to_broker()
+    client.loop_start()
+
+    while True:
+        client.on_message = on_message
+        time.sleep(0.5)
 
 
-# we have to wait for permission deciding
-for t in threads:
-    t.join()
+    # we have to wait for permission deciding
+    for t in threads:
+        t.join()
 
-# stop subscribe
-client.loop_stop()
-client.disconnect()
+    # stop subscribe
+    client.loop_stop()
+    client.disconnect()
 
