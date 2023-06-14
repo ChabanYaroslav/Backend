@@ -69,6 +69,7 @@ class Actor:
         }
 
 
+# Interface
 class IDatabase:
     # getAllLogs returns all logs in the databases encoded in an array.
     @abstractmethod
@@ -95,6 +96,7 @@ class IDatabase:
     @abstractmethod
     def updatePlate(self, plate_id: string, plate: Plate) -> bool:
         pass
+
     # getImage gets an image from the database and returns an ImageEntity.
     @abstractmethod
     def getImage(self, image_id: datetime) -> None | ImageEntity:
@@ -237,8 +239,6 @@ class PlatesResolver(Resource):
 
     # Gets multiple plates in the body of the request and adds it to the database.
     @inject
-
-
     def get(self, database: IDatabase = Provide[Container.database]):
         try:
             plates = database.getAllPlates()
