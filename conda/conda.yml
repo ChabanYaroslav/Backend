@@ -32,3 +32,8 @@ dependencies:
       - imageio
       - six
       - aniso8601
+      - flask_restful
+      - dependency_injector
+      - psycopg2
+      - psycopg2-binary
+      - paho-mqtt
