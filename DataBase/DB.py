@@ -1,13 +1,17 @@
 """this module provides communication with db"""
-
+import base64
 from datetime import datetime
-from DB.ConnectDB import ConnectDB
 
-# DB
+import psycopg2
+
+from DataBase.ConnectDB import ConnectDB
+
+# DataBase
 conn = ConnectDB()
-cur = None
+conn.connect()
+cur = conn.get_cursor()
 
-# name of the tables in DB
+# name of the tables in DataBase
 licenses_table = 'license_plates'
 images_table = 'images'
 logs_table = 'logs'
@@ -16,15 +20,17 @@ logs_table = 'logs'
 select = "Select {} FROM {} "
 select_where = select + "WHERE {}"
 insert = "insert into {} ({}) values ({})"
+update = "update {} set {} = {} where {} = {}"
+select_by_substring = "select {} from {} where {} = \'{}%\'"
+delete_query = "DELETE FROM {} WHERE {}"
 
 
 def connect():
-    """create connection with DB"""
+    """create connection with DataBase"""
     global conn  # to change global variable
-    global cur
     conn = ConnectDB()
     conn.connect()
-    # conn.execute()
+    global cur
     cur = conn.get_cursor()
 
 
@@ -35,7 +41,7 @@ def close_connection():
 
 def get_license(license: str) -> (str, str):
     """get license with its expiry_date, else given license
-    does not exist in DB return value is (-1,-1)"""
+    does not exist in DataBase return value is (-1,-1)"""
     column = "license_plate, expiry_date"
     name_of_table = licenses_table
     where_condition = "license_plate = \'" + license + "\'"
@@ -43,18 +49,33 @@ def get_license(license: str) -> (str, str):
     return __get_data(column, name_of_table, where_condition)
 
 
-def record_license(license: str, expiry_date: str):
+def record_license(license: str, expiry_date: datetime):
     """record given license"""
     name_of_table = licenses_table
     column = 'license_plate, expiry_date'
+    expiry_date = expiry_date.strftime("%Y-%m-%d")
     values = [license, expiry_date]
 
     return __insert_data(name_of_table, column, values)
+
 
 def get_all_licenses():
     name_of_table = licenses_table
     column = '*'
     return __get_data(column, name_of_table)
+
+
+def change_license(new_license: str, new_expire_date: datetime, old_license: str):
+    name_of_table = licenses_table
+    query = "update {} set license_plate = \'{}\', expiry_date = \'{}\' where license_plate = \'{}\'".format(name_of_table, new_license, new_expire_date, old_license)
+    return __execute_query(query, True)
+
+
+def get_license_by_substring(substring: str):
+    name_of_table = licenses_table
+    column = '*'
+    where = 'license_plate Like \'{}%\''.format(substring)
+    return __get_data(column, name_of_table, where)
 
 
 def get_log(time_stamp: datetime, by: str):
@@ -86,9 +107,10 @@ def get_log(time_stamp: datetime, by: str):
             hour = '0' + hour
 
         date = date + " " + hour
-        where_condition = "to_char(time_stemp, 'yyyy-mm-dd hh') = " + "\'" + date + "\'"
+        where_condition = "to_char(time_stemp, 'yyyy-mm-dd HH24') = " + "\'" + date + "\'"
 
     return __get_data(column, name_of_table, where_condition)
+
 
 def get_all_logs():
     name_of_table = logs_table
@@ -100,23 +122,24 @@ def record_log(time_stamp: datetime, action: str, description: str, time_stamp_o
     column = "time_stemp, action, description, image_id"
     name_of_table = logs_table
     time_stamp = time_stamp.strftime("%Y-%m-%d %H:%M:%S")
-    time_stamp_of_image = str(time_stamp_of_image)
+    if time_stamp_of_image is None:
+        time_stamp_of_image = None
+    else:
+        time_stamp_of_image = str(time_stamp_of_image)
     values = [time_stamp, action, description, time_stamp_of_image]
 
     return __insert_data(name_of_table, column, values)
 
 
-def get_image(id: datetime):
+def get_image(id: datetime) -> base64:
+    """ get images date in base64 format """
     column = 'image_data'
     name_of_table = images_table
-    where_condition = "id = \'" + id + "\'"
+    where_condition = "to_char(id, 'yyyy-mm-dd HH24:MI:SS') = \'" + id.strftime("%Y-%m-%d %H:%M:%S") + "\'"
     data = __get_data(column, name_of_table, where_condition)
-    #if data is not None:
-    #    data = data[0]
-        # Write the binary data to a file
-        #with open('image_{}.jpg'.format(id), 'wb') as f:
-            #f.write(data)
+    data = base64.b64decode(bytes(data[0][0])) # bytes converts the address of memory to the value, that saved in this memory block
     return data
+
 
 def get_all_images():
     name_of_table = images_table
@@ -124,28 +147,26 @@ def get_all_images():
     return __get_data(column, name_of_table)
 
 
-
-def save_image(time_stamp: datetime, image):
+def save_image(time_stamp: datetime, image: base64):
     name_of_table = images_table
-    column = 'id, image_data'
-    value = [str(time_stamp), image]
+    column = 'id, image_data, file_extension'
+    value = [str(time_stamp), image, 'jpg']
     return __insert_data(name_of_table, column, value)
 
 
-
 # private function
-def __execute_query(query: str, insert: bool):
+def __execute_query(query: str, insert: bool) -> []:
     """execute given query and get result"""
     global conn
     global cur
-    result = None
+    result = []
     try:
         cur.execute(query)
         if insert:
             # global curr
             conn.commit()
+            result = [] # means that executing was successful
         else:  # because if insert then we get error, because db.fetchall() does not work by insert query
-            # global curr
             result = cur.fetchall()
     except Exception as e:
         print("Error by query execution. Query: ", query)
@@ -162,8 +183,8 @@ def __insert_data(name_of_table: str, column: str, values):
         val = values[i]
         if isinstance(val, str):
             val = '\'' + val + '\''
-        if val is None:
-            val = 'NULL'
+        elif val is None:
+            val = 'null'
         if i + 1 < len(values):
             array = array + str(val) + ', '
         else:
@@ -180,3 +201,9 @@ def __get_data(column: str, name_of_table: str, where_condition: str = None):
     else:
         query = select_where.format(column, name_of_table, where_condition)
     return __execute_query(query, insert=False)
+
+
+def remove_license(plate_id: str):
+    where = "license_plate = \'" + str(plate_id) + '\''
+    query = delete_query.format(licenses_table, where)
+    return __execute_query(query, True)
