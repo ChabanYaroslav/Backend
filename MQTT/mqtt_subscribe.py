@@ -22,12 +22,14 @@ def on_message(client, userdata, messager):
             return
 
         # save image in DataBase #db.save_image(timestamp, body)
-        Thread(target=api_db.record_log_with_image,
-               args=[timestamp, "receive photo", "got photo of car from RBI", body]).start()
+        t = Thread(target=api_db.record_log_with_image,
+               args=[timestamp, "receive photo", "got photo of car from RBI", body])
+        threads.append(t)
+        t.start()
 
-        global access_thread
-        access_thread = Thread(target=publish_command, args=[timestamp, body]).start()
-
+        t = Thread(target=publish_command, args=[timestamp, body])
+        threads.append(t)
+        t.start()
 
 def publish_command(timestamp:datetime, image64: base64):
     number = None; expiry_date = None
@@ -42,14 +44,32 @@ def publish_command(timestamp:datetime, image64: base64):
         expiry_date = result[0][1]
         if plate_number_d == number:
             now = datetime.datetime.now()
-            if expiry_date > now:
-                pass # send open gate
+            if expiry_date >= now:
+                # send open gate
+                message = json_m.json_message("0001")
+                client.publish(topic, message)
+                t = Thread(target=api_db.record_log, args=[timestamp, "open gate/bar", "The car has permission to drive in" ])
+                threads.append(t)
+                t.start()
             else:
-                pass # record log no access, expiry_date is not valid
+                # send leave gate close, expiry_date is not valid
+                message = json_m.json_message("0010")
+                client.publish(topic, message)
+                t = Thread(target=api_db.record_log,
+                       args=[timestamp, "keep gate/bar close", "No permission, expiry date of plate has expired"])
+                threads.append(t)
+                t.start()
     else:
-        pass  # record log no access, plate has not permission
+        # send keep gate/bar close
+        message = json_m.json_message("0010")
+        client.publish(topic, message)
+        t = Thread(target=api_db.record_log,
+               args=[timestamp, "keep gate/bar close", "This car has no permission"])
+        threads.append(t)
+        t.start()
 
-access_thread = None
+topic = "SPS_2023"
+threads = []
 # start subscribe
 client = connection.connect_to_broker()
 client.loop_start()
@@ -59,9 +79,11 @@ while True:
     time.sleep(0.5)
 
 
+# we have to wait for permission deciding
+for t in threads:
+    t.join()
+
 # stop subscribe
 client.loop_stop()
-
-access_thread.join()  # we have to wait for permission deciding
 client.disconnect()
 

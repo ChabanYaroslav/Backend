@@ -14,8 +14,8 @@
     Backend -> RPI
      N | action |       body           | meaning
     -----------------------------------------------------
-     1 | 0001  |                       |
-     2 | 0010  |                       |
+     1 | 0001  |                       | open gate ( car has permission)
+     2 | 0010  |                       | keep gate close (car has no permission)
      3 | 0100  |                       |
      4 | 0101  |                       |
      5 | 0111  |                       | requests photo
