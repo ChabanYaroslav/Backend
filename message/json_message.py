@@ -20,7 +20,7 @@
      4 | 0101  |                       |
      5 | 0111  |                       | requests photo
     6a | 0000  |                       | requests all states
-    6b | 0000  | "gate,light"          | sets state of RMI as long as it is not reset; 2 means don't care, 1 or 0 set states of RPI
+    6b | 0000  | "gate,light"          | sets state of RMI as long as it is not reset; 2 means don't care, 1 or 0 set states of RPI. RBI sends back new states
         for 6b: {"action:" 0000, "21"}
         where: RPI is allowed to change gate itself
                but light should be always on
@@ -39,7 +39,6 @@ def json_message(action: str, body: str = ''):
         "action": action,
         "body": body
     }
-    message["action"]
     return json.dumps(message)
 
 

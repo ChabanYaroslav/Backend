@@ -1,9 +1,6 @@
-import base64
 import datetime
-import time
 from threading import Thread
 
-import cv2
 
 import database.API_DB as db
 from message import json_message as json_m
@@ -12,10 +9,13 @@ import mqtt.mqtt_connection as connection
 topic = "SPS_2023"
 photo = None
 timestamp = None
+light = -1
+bar = -1
+is_set = False
+
 
 def get_photo_from_rbi():
     global photo, timestamp
-
 
     def on_message(client, userdata, messager):
         global photo, timestamp, run
@@ -27,10 +27,10 @@ def get_photo_from_rbi():
         if action == "1000":  # receive photo
             if len(body) <= 0:
                 print("Error: body is empty by receiving of photo")
-                run = False
+                client.disconnect()
                 return
 
-            photo = body  # base64 opencv frame
+            photo = body
             # save image in database #db.save_image(timestamp, body)
             Thread(target=db.record_log_with_image,
                    args=[timestamp, "receive photo", "got photo from RBI", photo]).start()
@@ -40,12 +40,14 @@ def get_photo_from_rbi():
 
     # end of on_message
 
-    message = json_m.json_message("0111")  # request photo
-    client = connection.connect_to_broker()
-    # send request
+    # log
     Thread(target=db.record_log,
            args=[datetime.datetime.now(), "request photo", "send command to RBI: \"take photo\""]).start()
-    client.publish(topic, message)  # send message to rbi
+
+    # send request
+    message = json_m.json_message("0111")
+    client = connection.connect_to_broker()
+    client.publish(topic, message)
 
     # start subscribe
     client.on_message = on_message
@@ -55,12 +57,12 @@ def get_photo_from_rbi():
 
 
 def get_system_state_from_rbi():
+    global light, bar
     light = -1
     bar = -1
-    run = True
 
     def on_message(client, userdata, messager):
-        global light, bar, run
+        global light, bar
         timestamp = datetime.datetime.today()
         m = json_m.loads(messager.payload.decode("utf-8"))
         action = m["action"]
@@ -69,7 +71,7 @@ def get_system_state_from_rbi():
         if action == "1000":  # receive states
             if len(body) <= 0:
                 print("Error: body is empty by receiving of all states")
-                run = False
+                client.disconnect()
                 return
             # read states of RBI
             bar = body[0]
@@ -92,35 +94,32 @@ def get_system_state_from_rbi():
             Thread(target=db.record_log,
                    args=[timestamp, "receive states", des]).start()
 
-            run = False
+            client.disconnect()  # stop subscribe
 
     # end of on_message
 
-    message = json_m.json_message("0000")  # request all states
-    client = connection.connect_to_broker()
-    client.publish(topic, message)
-    # db.record_log(datetime.datetime.now(), "request states", "send command to RBI: \"get states of bar and light\"")
+    # log
     Thread(target=db.record_log,
            args=[datetime.datetime.now(), "request states",
                  "send command to RBI: \"get states of bar and light\""]).start()
 
-    client.loop_start()
-    while run:  # if we get the photo run will be changed to False
-        client.on_message = on_message
-        time.sleep(0.1)
-    # stop subscribe
-    client.loop_stop()
-    client.disconnect()
+    # request all states
+    message = json_m.json_message("0000")
+    client = connection.connect_to_broker()
+    client.publish(topic, message)
+
+    client.on_message = on_message
+    client.loop_forever()
 
     return light, bar
 
 
 def set_system_state(light: int, bar: int) -> bool:
+    global is_set
     is_set = False
-    run = True
 
     def on_message(client, userdata, messager):
-        global is_set, run
+        global is_set
         timestamp = datetime.datetime.today()
         m = json_m.loads(messager.payload.decode("utf-8"))
         action = m["action"]
@@ -141,7 +140,7 @@ def set_system_state(light: int, bar: int) -> bool:
                        args=[timestamp, "receive answer",
                              "unsuccessful setting of states. Actual states are: light: " + str(
                                  rec_light) + "bar: " + str(rec_bar)]).start()
-            run = False
+            client.disconnect()
 
     # end of on_message
 
@@ -154,25 +153,16 @@ def set_system_state(light: int, bar: int) -> bool:
         light == 2
 
     setting = str(bar) + str(light)  # "gate,light"
-    message = json_m.json_message("0000", setting)
-    client = connection.connect_to_broker()
-    client.publish(topic, message)
+    # log
     Thread(target=db.record_log,
            args=[datetime.datetime.now(), "set states of RBI",
                  "send command to RBI: \" set bar: " + str(bar) + " and light: " + str(light) + "\""]).start()
 
-    client.loop_start()
-    while run:  # if we get the photo run will be changed to False
-        client.on_message = on_message
-        time.sleep(0.1)
-    # stop subscribe
-    client.loop_stop()
-    client.disconnect()
+    message = json_m.json_message("0000", setting)
+    client = connection.connect_to_broker()
+    client.publish(topic, message)
+
+    client.on_message = on_message
+    client.loop_forever()
 
     return is_set
-
-
-def __save_image(path_of_image: str, image_data: base64):
-    image_data = base64.b64decode(image_data)
-    with open(path_of_image, 'wb') as image_file:
-        image_file.write(image_data)
