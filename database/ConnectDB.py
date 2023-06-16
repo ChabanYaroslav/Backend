@@ -1,13 +1,13 @@
 import psycopg2
 
 
-# Mqtt.eclipseprojects.io
+# mqtt.eclipseprojects.io
 class ConnectDB:
-    """create connection with Database"""
+    """create connection with database"""
     conn = None
     cur = None
 
-    # Database information
+    # database information
     db_name = 'postgres'
     db_user = 'postgres'
     db_pass = 'sps-postgres'
@@ -16,11 +16,11 @@ class ConnectDB:
 
     def __init__(self):
         """only initializes object of ConnectDB.
-         do not create a connection with Database"""
+         do not create a connection with database"""
         pass
 
     def connect(self):
-        """create a connection with Database"""
+        """create a connection with database"""
         try:
             self.conn = psycopg2.connect(
                 database=self.db_name,
@@ -35,7 +35,7 @@ class ConnectDB:
             #return self.conn
 
     def close(self):
-        """close a connection with Database"""
+        """close a connection with database"""
         try:
             self.conn.close()
             if self.cur is not None:

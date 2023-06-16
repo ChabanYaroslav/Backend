@@ -5,8 +5,8 @@ import time
 from threading import Thread
 
 import message.json_message as json_m
-import Mqtt.mqtt_connection as connection
-import Database.API_DB as api_db
+import mqtt.mqtt_connection as connection
+import database.API_DB as api_db
 from api.server import ImageEntity
 from recognition.recogntion import Recognizer
 #
@@ -24,7 +24,7 @@ def on_message(client, userdata, messager):
             print("Error: body is empty by receiving of photo")
             return
 
-        # save image in Database
+        # save image in database
         t = Thread(target=api_db.record_log_with_image,
                args=[timestamp, "receive photo", "got photo of car from RBI", body])
         threads.append(t)

@@ -2,9 +2,9 @@ import datetime
 from threading import Thread
 
 
-import Database.API_DB as db
+import database.API_DB as db
 from message import json_message as json_m
-import Mqtt.mqtt_connection as connection
+import mqtt.mqtt_connection as connection
 
 topic = "SPS_2023"
 photo = None
@@ -31,7 +31,7 @@ def get_photo_from_rbi():
                 return
 
             photo = body
-            # save image in Database #db.save_image(timestamp, body)
+            # save image in database #db.save_image(timestamp, body)
             Thread(target=db.record_log_with_image,
                    args=[timestamp, "receive photo", "got photo from RBI", photo]).start()
 
@@ -90,7 +90,7 @@ def get_system_state_from_rbi():
 
             ac = a + l
             des = ls1 + ls2
-            # save in Database # db.record_log(timestamp, ac, des)
+            # save in database # db.record_log(timestamp, ac, des)
             Thread(target=db.record_log,
                    args=[timestamp, "receive states", des]).start()
 

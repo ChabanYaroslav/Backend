@@ -1,7 +1,7 @@
 from threading import Thread
 
 from api.server import run
-from Mqtt.mqtt_subscriber import run as run_subscriber
+from mqtt.mqtt_subscriber import run as run_subscriber
 
 if __name__ == '__main__':
     t = Thread(target=run)
