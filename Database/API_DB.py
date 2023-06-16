@@ -1,22 +1,22 @@
-""" API to communicate with database """
+""" API to communicate with Database """
 import base64
 from datetime import datetime
-import database.DB as db
+import Database.DB as db
 
 
 def connect():
-    """create connection with database"""
+    """create connection with Database"""
     db.connect()
 
 
 def close_connection():
-    """close connection with database"""
+    """close connection with Database"""
     db.close_connection()
 
 
 def get_license(license_plate: str) -> []:
     """get license with its expiry_date, else given license
-        does not exist in database return value is None"""
+        does not exist in Database return value is None"""
     return db.get_license(license_plate)
 
 
@@ -61,7 +61,7 @@ def get_image(id: datetime) -> base64:
 
 
 def save_image(time_stamp: datetime, image: base64)  -> []:
-    """save image in database"""
+    """save image in Database"""
     return db.save_image(time_stamp, image)
 
 

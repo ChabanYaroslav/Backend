@@ -3,14 +3,14 @@ import base64
 from datetime import datetime
 
 
-from database.ConnectDB import ConnectDB
+from Database.ConnectDB import ConnectDB
 
-# database
+# Database
 conn = ConnectDB()
 conn.connect()
 cur = conn.get_cursor()
 
-# name of the tables in database
+# name of the tables in Database
 licenses_table = 'license_plates'
 images_table = 'images'
 logs_table = 'logs'
@@ -25,7 +25,7 @@ delete_query = "DELETE FROM {} WHERE {}"
 
 
 def connect():
-    """create connection with database"""
+    """create connection with Database"""
     global conn  # to change global variable
     conn = ConnectDB()
     conn.connect()
@@ -40,7 +40,7 @@ def close_connection():
 
 def get_license(license: str) -> (str, str):
     """get license with its expiry_date, else given license
-    does not exist in database return value is (-1,-1)"""
+    does not exist in Database return value is (-1,-1)"""
     column = "license_plate, expiry_date"
     name_of_table = licenses_table
     where_condition = "license_plate = \'" + license + "\'"
