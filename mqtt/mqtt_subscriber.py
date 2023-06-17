@@ -9,7 +9,7 @@ import mqtt.mqtt_connection as connection
 import database.API_DB as api_db
 from api.server import ImageEntity
 from recognition.recogntion import Recognizer
-#
+
 
 
 def on_message(client, userdata, messager):
@@ -31,10 +31,10 @@ def on_message(client, userdata, messager):
         t.start()
 
         # recog. image
-        publish_command(timestamp, body)
+        publish_command(timestamp, body, client)
 
 
-def publish_command(timestamp:datetime, image64: base64):
+def publish_command(timestamp:datetime, image64: base64, client):
     number = None; expiry_date = None
     image = ImageEntity(timestamp, image64)
     plate_number_d = detecter.detect(image) # get number of plate

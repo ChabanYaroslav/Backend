@@ -68,7 +68,7 @@ def get_system_state_from_rbi():
         action = m["action"]
         body = m["body"]  # has gate,light,LS1,LS2
 
-        if action == "1000":  # receive states
+        if action == "1111":  # receive states
             if len(body) <= 0:
                 print("Error: body is empty by receiving of all states")
                 client.disconnect()
@@ -78,18 +78,13 @@ def get_system_state_from_rbi():
             light = body[1]
 
             # create description
-            a = "gate "
+            a = "gate is "
             a = body[0] == "1" and a + "open" or a + "close"
-            l = ", light "
+            l = ", light is "
             l = body[1] == "1" and l + "on" or l + "off"
 
-            ls1 = "Is car in front of ls1: "
-            ls1 = body[2] == "1" and ls1 + "yes" or ls1 + "no"
-            ls2 = " ,Is car in front of ls2: "
-            ls2 = body[3] == "1" and ls2 + "yes" or ls2 + "no"
+            des = a + l
 
-            ac = a + l
-            des = ls1 + ls2
             # save in database # db.record_log(timestamp, ac, des)
             Thread(target=db.record_log,
                    args=[timestamp, "receive states", des]).start()
@@ -126,20 +121,25 @@ def set_system_state(light: int, bar: int) -> bool:
         body = m["body"]
 
         if action == "1111":  # 1111 with new states with body: gate,light
+            if len(body) <= 0:
+                print("Error: body is empty by receiving changed states")
+                client.disconnect()
+                return
+
             rec_bar = int(body[0])
             rec_light = int(body[1])
             if rec_bar == bar and rec_light == light:
                 is_set = True
                 Thread(target=db.record_log,
                        args=[timestamp, "receive answer",
-                             "receive answer to request from RBI to set its states like: light: " + str(
-                                 light) + "bar: " + str(bar)]).start()
+                             "RBIs states was set like: light:" + str(
+                                 light) + " bar:" + str(bar)]).start()
             else:
                 is_set = False
                 Thread(target=db.record_log,
                        args=[timestamp, "receive answer",
-                             "unsuccessful setting of states. Actual states are: light: " + str(
-                                 rec_light) + "bar: " + str(rec_bar)]).start()
+                             "Unsucc. setting. The states stay: light:" + str(
+                                 rec_light) + " bar:" + str(rec_bar)]).start()
             client.disconnect()
 
     # end of on_message
@@ -156,7 +156,7 @@ def set_system_state(light: int, bar: int) -> bool:
     # log
     Thread(target=db.record_log,
            args=[datetime.datetime.now(), "set states of RBI",
-                 "send command to RBI: \" set bar: " + str(bar) + " and light: " + str(light) + "\""]).start()
+                 "send command to RBI:\"set bar:" + str(bar) + " and light:" + str(light) + "\""]).start()
 
     message = json_m.json_message("0000", setting)
     client = connection.connect_to_broker()
