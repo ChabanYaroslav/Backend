@@ -12,14 +12,3 @@ Please, also make sure to update the container class and add the custom DB- and 
 Please install a conda environment. Find the conda.yml file in the conda directory. \
 For an ugly demo implementation go to the `recognition_run` file. To access the plate recognition, first initiliaze a `Recognizer`object. Then run the method `detect()`with a valid `ImageEntity` object.
 You should get the license plate number as a string.
-
-## TODOs:
-
-		Yaroslav 
-		- records of permitted license plates (db related)
-		- log capturing (db related)
-		- command and control for RPI (MQTT)
-			- takes pictures from RPI
-			- sends back proper state of the gate (open gate or close gate; toggle)
-			- sends back proper gate of the light (turn on or off; toggle)
-			- receive states of the actuators
