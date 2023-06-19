@@ -137,9 +137,9 @@ class MemoryDevice(IDevice):
         return a
 
     def setStates(self, states: Actor) -> bool:
-        if states.light > 0:
+        if states.light >= 0:
             self.light = states.light
-        if states.bar > 0:
+        if states.bar >= 0:
             self.bar = states.bar
         return True
 
@@ -264,7 +264,8 @@ class Database(IDatabase):
             return True
 
     def getImage(self, image_id: str) -> None | ImageEntity:
-        image = api_db.get_image(image_id)
+        print(image_id)
+        image = api_db.get_image(image_id) # TODO what i get here???
         if image is None or len(image) == 0:
             return None
         else:
@@ -460,6 +461,6 @@ def run(port: int = 5000, debug: bool = False):
 
     container.init_resources()
     container.wire(modules=[__name__])
-    app.run(debug=debug, port=port)  # run our Flask app
+    app.run(debug=debug, port=port, host="0.0.0.0")  # run our Flask app
 
 

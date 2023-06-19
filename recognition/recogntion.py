@@ -10,7 +10,7 @@ from imageio import imread_v2 as imread
 from api.server import ImageEntity
 import cv2
 
-
+pytesseract.tesseract_cmd = 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 def preprocess_image(image: Array = None):
     if image is None:
         return
