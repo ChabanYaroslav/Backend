@@ -2,6 +2,7 @@ import base64
 import json
 import logging
 import string
+import time
 
 from flask import Flask, jsonify, request, Response
 from flask_restful import Resource, Api, abort
@@ -62,8 +63,14 @@ class Log:
 
 class Actor:
     def __init__(self, light: int = -1, bar: int = -1):
-        self.light = light
-        self.bar = bar
+        if isinstance(light, str):
+            self.light = int(light)
+        else:
+            self.light = light
+        if isinstance(bar, str):
+            self.bar = int(bar)
+        else:
+            self.bar = bar
 
     def to_json(self):
         return {
@@ -218,7 +225,11 @@ class Database(IDatabase):
 
     def getAllLogs(self) -> list[Log]:
         list = []
+        #time.sleep(3)
         logs = api_db.get_all_logs()
+        if logs is None:
+            return None
+
         for i in range(0, len(logs)):
             log = logs[i]
             time_id = log[0]  # datatime
@@ -232,6 +243,9 @@ class Database(IDatabase):
     def getAllPlates(self) -> list[Plate]:
         list = []
         plates = api_db.get_all_licenses()
+        if len(plates) == 0:
+            return None
+
         for i in range(0, len(plates)):
             p = plates[i]
             number = p[0]
@@ -264,12 +278,17 @@ class Database(IDatabase):
             return True
 
     def getImage(self, image_id: str) -> None | ImageEntity:
-        print(image_id)
-        image = api_db.get_image(image_id) # TODO what i get here???
+        try:
+            image_id = image_id[:19]
+            print(image_id)
+            image_id = datetime.datetime.strptime(image_id,"%Y-%m-%dT%H:%M:%S")
+            image = api_db.get_image(image_id) # TODO what i get here???
+        except Exception as e:
+            print(e)
         if image is None or len(image) == 0:
             return None
         else:
-            return ImageEntity(image_id, str(image))
+            return ImageEntity(image_id, image)
 
     def getImageBase64(self, path: str):
         with open(path, "rb") as img_file:
@@ -436,9 +455,9 @@ class ActorsResolver(Resource):
             j = request.get_json(force=True)
             a = Actor(**j)
             s = device.setStates(a)
-            if not s:
+            if s is None:  #if not s:
                 abort(400)
-            return "OK"
+            return s
         except Exception as ex:
             logging.error(ex)
             abort(500)

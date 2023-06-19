@@ -1,5 +1,6 @@
 """this module provides communication with db"""
 import base64
+import time
 from datetime import datetime
 
 
@@ -136,7 +137,7 @@ def get_image(id: datetime) -> base64:
     name_of_table = images_table
     where_condition = "to_char(id, 'yyyy-mm-dd HH24:MI:SS') = \'" + id.strftime("%Y-%m-%d %H:%M:%S") + "\'"
     data = __get_data(column, name_of_table, where_condition)
-    data = base64.b64decode(bytes(data[0][0])) # bytes converts the address of memory to the value, that saved in this memory block
+    data = bytes(data[0][0]) # base64.b64decode(bytes(data[0][0])) # bytes converts the address of memory to the value, that saved in this memory block
     return data
 
 
@@ -160,6 +161,7 @@ def __execute_query(query: str, insert: bool) -> []:
     global cur
     result = []
     try:
+        #time.sleep(2)
         cur.execute(query)
         if insert:
             # global curr

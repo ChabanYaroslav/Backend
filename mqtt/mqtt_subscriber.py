@@ -25,10 +25,8 @@ def on_message(client, userdata, messager):
             return
 
         # save image in database
-        t = Thread(target=api_db.record_log_with_image,
-               args=[timestamp, "receive photo", "got photo of car from RBI", body])
-        threads.append(t)
-        t.start()
+        api_db.record_log_with_image(timestamp, "receive photo", "got photo of car from RBI", body)
+
 
         # recog. image
         publish_command(timestamp, body, client)
@@ -37,12 +35,12 @@ def on_message(client, userdata, messager):
 def publish_command(timestamp:datetime, image64: base64, client):
     number = None; expiry_date = None
     image = ImageEntity(timestamp, image64)
-    plate_number_d = detecter.detect(image)  # get number of plate
+    #plate_number_d = detecter.detect(image)  # get number of plate
 
-    if plate_number_d is None:
-        plate_number_d = ''
-    else:
-        print("The plate number was recognized as:", plate_number_d)
+   # if plate_number_d is None:
+    #    plate_number_d = ''
+    #else:
+    #    print("The plate number was recognized as:", plate_number_d)
 
     plate_number_d = "W24681R" # TODO delete
 
@@ -56,25 +54,18 @@ def publish_command(timestamp:datetime, image64: base64, client):
             # send open gate
             message = json_m.json_message("0001")
             client.publish(topic, message)
-            t = Thread(target=api_db.record_log, args=[timestamp, "open gate/bar", "The car has permission to drive in" ])
-            threads.append(t)
-            t.start()
+            api_db.record_log(timestamp, "open gate/bar", "The car has permission to drive in")
         else:
             # send keep gate close, expiry_date is not valid
             message = json_m.json_message("0010")
             client.publish(topic, message)
-            t = Thread(target=api_db.record_log,
-                   args=[timestamp, "keep gate/bar close", "No permission, expiry date of plate has expired"])
-            threads.append(t)
-            t.start()
+            api_db.record_log(timestamp, "keep gate/bar close", "No permission, expiry date of plate has expired")
     else:
         # send keep gate/bar close, plate was not found in the db
         message = json_m.json_message("0010")
         client.publish(topic, message)
-        t = Thread(target=api_db.record_log,
-               args=[timestamp, "keep gate/bar close", "This car has no permission"])
-        threads.append(t)
-        t.start()
+        api_db.record_log(timestamp, "keep gate/bar close", "This car has no permission")
+
 
 
 topic = "SPS_2023"
@@ -94,12 +85,12 @@ def run():
     client.loop_start()
 
     while True:
-        time.sleep(0.5)
+        time.sleep(0.1)
 
 
     # we have to wait for permission deciding
-    for t in threads:
-        t.join()
+#    for t in threads:
+#        t.join()
 
     # stop subscribe
     client.loop_stop()

@@ -1,4 +1,6 @@
 import datetime
+import json
+import time
 from threading import Thread
 
 
@@ -32,18 +34,14 @@ def get_photo_from_rbi():
 
             photo = body
             # save image in database #db.save_image(timestamp, body)
-            Thread(target=db.record_log_with_image,
-                   args=[timestamp, "receive photo", "got photo from RBI", photo]).start()
-
+            db.record_log_with_image(timestamp, "receive photo", "got photo from RBI", photo)
             # stop subscribe
             client.disconnect()
 
     # end of on_message
 
     # log
-    Thread(target=db.record_log,
-           args=[datetime.datetime.now(), "request photo", "send command to RBI: \"take photo\""]).start()
-
+    db.record_log(datetime.datetime.now(), "request photo", "send command to RBI: \"take photo\"")
     # send request
     message = json_m.json_message("0111")
     client = connection.connect_to_broker()
@@ -85,19 +83,15 @@ def get_system_state_from_rbi():
 
             des = a + l
 
-            # save in database # db.record_log(timestamp, ac, des)
-            Thread(target=db.record_log,
-                   args=[timestamp, "receive states", des]).start()
-
+            # save in database
+            db.record_log(timestamp, "receive states", des)
             client.disconnect()  # stop subscribe
 
     # end of on_message
 
     # log
-    Thread(target=db.record_log,
-           args=[datetime.datetime.now(), "request states",
-                 "send command to RBI: \"get states of bar and light\""]).start()
-
+    db.record_log(datetime.datetime.now(), "request states",
+                 "send command to RBI: \"get states of bar and light\"")
     # request all states
     message = json_m.json_message("0000")
     client = connection.connect_to_broker()
@@ -108,13 +102,15 @@ def get_system_state_from_rbi():
 
     return light, bar
 
+rec_bar = None
+rec_light = None
 
 def set_system_state(light: int, bar: int) -> bool:
-    global is_set
+    global is_set, rec_bar, rec_light
     is_set = False
 
     def on_message(client, userdata, messager):
-        global is_set
+        global is_set, rec_bar, rec_light
         timestamp = datetime.datetime.today()
         m = json_m.loads(messager.payload.decode("utf-8"))
         action = m["action"]
@@ -147,22 +143,23 @@ def set_system_state(light: int, bar: int) -> bool:
     # 2 means that RBI can decide for itself what to do
     # 1 means open/on
     # 0 means close/off
-    if bar == -1:
+    if bar == 0 or bar == -1:
         bar = 2
-    if light == -1:
-        light == 2
+    if light == 0 or light == -1:
+        light = 2
 
     setting = str(bar) + str(light)  # "gate,light"
     # log
-    Thread(target=db.record_log,
-           args=[datetime.datetime.now(), "set states of RBI",
-                 "send command to RBI:\"set bar:" + str(bar) + " and light:" + str(light) + "\""]).start()
-
+    #Thread(target=db.record_log,
+    #       args=[datetime.datetime.now(), "set states of RBI",
+    #             "send command to RBI:\"set bar:" + str(bar) + " and light:" + str(light) + "\""]).start()
+    db.record_log(datetime.datetime.now(), "set states of RBI",
+                 "send command to RBI:\"set bar:" + str(bar) + " and light:" + str(light) + "\"")
     message = json_m.json_message("0000", setting)
     client = connection.connect_to_broker()
     client.publish(topic, message)
 
     client.on_message = on_message
     client.loop_forever()
-
-    return is_set
+    j = '{"bar":'+str(rec_bar)+', "light": '+str(rec_light)+'}'
+    return json.loads(j) #is_set
