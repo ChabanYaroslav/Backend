@@ -6,13 +6,9 @@ from api.server import ImageEntity
 if __name__ == '__main__':
     detecter = Recognizer('./recognition/yolo_model/custom-416')
     image64 = ""
-    with open('./recognition/testimages/car2.jpg', "rb") as img_file:
+    with open('./recognition/testimages/car1.jpg', "rb") as img_file:
         image64 = base64.b64encode(img_file.read())
     image = ImageEntity(datetime.datetime.now(), image64)
     text = detecter.detect(image)
     print(text)
-    with open('./recognition/testimages/car4.jpg', "rb") as img_file:
-        image64 = base64.b64encode(img_file.read())
-    image = ImageEntity(datetime.datetime.now(), image64)
-    text = detecter.detect(image)
-    print(text)
+

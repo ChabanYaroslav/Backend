@@ -2,15 +2,17 @@ import base64
 import io
 import re
 from ctypes import Array
+
+import imutils
 import tensorflow as tf
+from PIL import Image
 from pytesseract import pytesseract
 from tensorflow.python.saved_model import tag_constants
 import numpy as np
 from imageio import imread_v2 as imread
 from api.server import ImageEntity
 import cv2
-
-pytesseract.tesseract_cmd = 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
+import pyocr
 def preprocess_image(image: Array = None):
     if image is None:
         return
@@ -21,92 +23,130 @@ def preprocess_image(image: Array = None):
 
 class Recognizer:
     def __init__(self, path):
-        self.saved_model_loaded = tf.saved_model.load(path, tags=[tag_constants.SERVING])
+        #self.saved_model_loaded = tf.saved_model.load(path, tags=[tag_constants.SERVING])
+        pass
 
     def detect(self, image: ImageEntity = None) -> str:
-        if image is None:
-            return ""
 
-        orig_image = self.convert_to_image(image)
-        img = preprocess_image(orig_image)
-        pred_bbox = self.plate_recog(img, orig_image)
-        return self.ocr(cv2.cvtColor(orig_image, cv2.COLOR_BGR2RGB), pred_bbox)
+        plate = self.ocr(self.convert_to_image(image))
+        return plate
 
-    def plate_recog(self, img, orig_image):
-        images_data = []
-        for i in range(1):
-            images_data.append(img)
-        images_data = np.asarray(images_data).astype(np.float32)
-        infer = self.saved_model_loaded.signatures['serving_default']
-        batch_data = tf.constant(images_data)
-        pred_bbox = infer(batch_data)
-        for key, value in pred_bbox.items():
-            boxes = value[:, :, 0:4]
-            pred_conf = value[:, :, 4:]
-        boxes, scores, classes, valid_detections = tf.image.combined_non_max_suppression(
-            boxes=tf.reshape(boxes, (tf.shape(boxes)[0], -1, 1, 4)),
-            scores=tf.reshape(pred_conf, (tf.shape(pred_conf)[0], -1, tf.shape(pred_conf)[-1])),
-            max_output_size_per_class=50,
-            max_total_size=50,
-            iou_threshold=0.45,
-            score_threshold=0.50
-        )
-        original_h, original_w, _ = orig_image.shape
-        bboxes = self.format_boxes(boxes.numpy()[0], original_h, original_w)
-        pred_bbox = [bboxes, scores.numpy()[0], classes.numpy()[0], valid_detections.numpy()[0]]
-        return pred_bbox
+    def ocr(self, img):
+        lab= cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        l_channel, a, b = cv2.split(lab)
 
-    @staticmethod
-    def ocr(img, data):
-        boxes, scores, classes, num_objects = data
-        for i in range(num_objects):
-            xmin, ymin, xmax, ymax = boxes[i]
-            box = img[int(ymin) - 5:int(ymax) + 5, int(xmin) - 5:int(xmax) + 5]
+        clahe = cv2.createCLAHE(clipLimit=0.1, tileGridSize=(1,1))
+        cl = clahe.apply(l_channel)
 
-            plate_num = ""
-            gray = cv2.cvtColor(box, cv2.COLOR_RGB2GRAY)
-            gray = cv2.resize(gray, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
-            blur = cv2.GaussianBlur(gray, (5, 5), 0)
-            gray = cv2.medianBlur(gray, 3)
-            ret, thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY_INV)
-            rect_kern = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-            dilation = cv2.dilate(thresh, rect_kern, iterations=1)
-            contours, hierarchy = cv2.findContours(dilation, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            sorted_contours = sorted(contours, key=lambda ctr: cv2.boundingRect(ctr)[0])
-            im2 = gray.copy()
-            for cnt in sorted_contours:
-                x, y, w, h = cv2.boundingRect(cnt)
-                height, width = im2.shape
-                if height / float(h) > 6: continue
-                ratio = h / float(w)
-                if ratio < 1.5: continue
-                area = h * w
-                if width / float(w) > 15: continue
-                if area < 100: continue
-                rect = cv2.rectangle(im2, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                roi = thresh[y - 5:y + h + 5, x - 5:x + w + 5]
-                roi = cv2.bitwise_not(roi)
-                roi = cv2.medianBlur(roi, 5)
-                text = pytesseract.image_to_string(roi,
-                                                   config='-c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ --psm 8 --oem 3')
-                text = re.sub('[^a-zA-Z0-9]*', '', text, 0, re.I)
-                plate_num += text
-            return plate_num
+        limg = cv2.merge((cl,a,b))
 
-    @staticmethod
-    def format_boxes(bboxes, image_height, image_width):
-        for box in bboxes:
-            ymin = int(box[0] * image_height)
-            xmin = int(box[1] * image_width)
-            ymax = int(box[2] * image_height)
-            xmax = int(box[3] * image_width)
-            box[0], box[1], box[2], box[3] = xmin, ymin, xmax, ymax
-        return bboxes
+        img = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
 
-    @staticmethod
-    def convert_to_image(image: ImageEntity = None):
+        img = cv2.resize(img, (1920,1080) )
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        cv2.imshow('Grayscale Image',gray)
+
+
+        edged = cv2.Canny(gray, 30, 200)
+        cv2.imshow('Edged',edged)
+        cv2.waitKey(0)
+        contours = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contours = imutils.grab_contours(contours)
+        contours = sorted(contours, key = cv2.contourArea, reverse = True)[:30]
+        screenCnt = None
+
+        for c in contours:
+
+            peri = cv2.arcLength(c, True)
+            approx = cv2.approxPolyDP(c, 0.018 * peri, True)
+
+
+            if len(approx) == 4:
+                x, y, w, h = cv2.boundingRect(approx)
+                hwratio = float(h)/w
+                ratio= float(w)/h
+                if ratio>=0.9 and ratio<=1.1 and hwratio <=4 and hwratio >= 6:
+                    pass
+                else:
+
+                    screenCnt = approx
+                    break
+
+        if screenCnt is None:
+            detected = 0
+            print ("No contour detected")
+        else:
+            detected = 1
+
+        if detected == 1:
+            cv2.drawContours(img, [screenCnt], -1, (0, 0, 255), 3)
+
+        mask = np.zeros(gray.shape,np.uint8)
+        new_image = cv2.drawContours(mask,[screenCnt],0,255,-1,)
+        new_image = cv2.bitwise_and(img,img,mask=mask)
+
+        (x, y) = np.where(mask == 255)
+        (topx, topy) = (np.min(x), np.min(y))
+        (bottomx, bottomy) = (np.max(x), np.max(y))
+        Cropped = img[topx:bottomx+1, topy:bottomy+1]
+        cv2.imshow("Cropped", Cropped)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+
+        rect = cv2.minAreaRect(screenCnt)
+        box = cv2.boxPoints(rect)
+        scale = 1
+        W = rect[1][0]
+        H = rect[1][1]
+
+        Xs = [i[0] for i in box]
+        Ys = [i[1] for i in box]
+        x1 = min(Xs)
+        x2 = max(Xs)
+        y1 = min(Ys)
+        y2 = max(Ys)
+
+        angle = rect[2]
+        rotated = False
+        if angle < -45:
+            angle += 90
+            rotated = True
+
+        center = (int((x1+x2)/2), int((y1+y2)/2))
+        size = (int(scale*(x2-x1)), int(scale*(y2-y1)))
+
+        M = cv2.getRotationMatrix2D((size[0]/2, size[1]/2), angle, 1.0)
+
+        cropped = cv2.getRectSubPix(img, size, center)
+        cropped = cv2.warpAffine(cropped, M, size)
+
+        croppedW = W if not rotated else H
+        croppedH = H if not rotated else W
+
+        image = cv2.getRectSubPix(
+            cropped, (int(croppedW*scale), int(croppedH*scale)), (size[0]/2, size[1]/2))
+
+        cv2.imshow("Cropped", image)
+        cv2.waitKey(0)
+
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        _, thres = cv2.threshold(image, 67, 255,0)
+        kernel = np.ones((5, 5), np.uint8)
+        cv2.erode(thres, kernel, thres)
+        cv2.dilate(thres, kernel, thres)
+
+
+
+        cv2.imshow("Img", thres)
+        cv2.waitKey(0)
+        cv2.imwrite("image.png", thres)
+        text = pytesseract.image_to_string(thres, config="--psm 7 tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+        text = re.sub('[^a-zA-Z0-9]*', '', text, 0, re.I)
+        return text
+    def convert_to_image(self, image: ImageEntity = None):
         if image is None:
             return
         img = imread(io.BytesIO(base64.b64decode(image.image)))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
         return img
