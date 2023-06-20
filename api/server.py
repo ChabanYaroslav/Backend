@@ -105,6 +105,7 @@ class IDatabase:
     @abstractmethod
     def updatePlate(self, plate_id: string, plate: Plate) -> bool:
         pass
+
     # getImage gets an image from the database and returns an ImageEntity.
     @abstractmethod
     def getImage(self, image_id: datetime) -> None | ImageEntity:
@@ -215,9 +216,9 @@ class MemoryDatabase(IDatabase):
             MemoryDatabase.images.append(
                 ImageEntity(MemoryDatabase.now - datetime.timedelta(minutes=30), base64.b64encode(img_file.read())))
 
-############
 
 
+################################
 class Database(IDatabase):
 
     def __init__(self):
@@ -225,7 +226,7 @@ class Database(IDatabase):
 
     def getAllLogs(self) -> list[Log]:
         list = []
-        #time.sleep(3)
+        # time.sleep(3)
         logs = api_db.get_all_logs()
         if logs is None:
             return None
@@ -280,9 +281,8 @@ class Database(IDatabase):
     def getImage(self, image_id: str) -> None | ImageEntity:
         try:
             image_id = image_id[:19]
-            print(image_id)
-            image_id = datetime.datetime.strptime(image_id,"%Y-%m-%dT%H:%M:%S")
-            image = api_db.get_image(image_id) # TODO what i get here???
+            image_id = datetime.datetime.strptime(image_id, "%Y-%m-%dT%H:%M:%S")
+            image = api_db.get_image(image_id)
         except Exception as e:
             print(e)
         if image is None or len(image) == 0:
@@ -294,6 +294,7 @@ class Database(IDatabase):
         with open(path, "rb") as img_file:
             Database.images.append(
                 ImageEntity(Database.now - datetime.timedelta(minutes=30), base64.b64encode(img_file.read())))
+
 
 class Device(IDevice):
     def __init__(self):
@@ -310,10 +311,7 @@ class Device(IDevice):
     def setStates(self, states: Actor) -> bool:
         is_set = api_mqtt.set_system_state(states.light, states.bar)
         return is_set
-
-###########
-
-
+####################################################################
 
 
 class Container(containers.DeclarativeContainer):
@@ -347,8 +345,6 @@ class PlatesResolver(Resource):
 
     # Gets multiple plates in the body of the request and adds it to the database.
     @inject
-
-
     def get(self, database: IDatabase = Provide[Container.database]):
         try:
             plates = database.getAllPlates()
@@ -455,7 +451,7 @@ class ActorsResolver(Resource):
             j = request.get_json(force=True)
             a = Actor(**j)
             s = device.setStates(a)
-            if s is None:  #if not s:
+            if s is None:  # if not s:
                 abort(400)
             return s
         except Exception as ex:
@@ -481,5 +477,3 @@ def run(port: int = 5000, debug: bool = False):
     container.init_resources()
     container.wire(modules=[__name__])
     app.run(debug=debug, port=port, host="0.0.0.0")  # run our Flask app
-
-

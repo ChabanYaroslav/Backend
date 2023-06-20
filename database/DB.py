@@ -1,6 +1,5 @@
 """this module provides communication with db"""
 import base64
-import time
 from datetime import datetime
 
 
@@ -161,7 +160,6 @@ def __execute_query(query: str, insert: bool) -> []:
     global cur
     result = []
     try:
-        #time.sleep(2)
         cur.execute(query)
         if insert:
             # global curr
